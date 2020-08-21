@@ -112,8 +112,6 @@ proc watch*(self: NWatchDog) {.async.} =
       for e in events:
         for evt in self.toWatch:
           if evt.id == e.id:
-            echo events
-            echo evt
             evt.onEvent(e.file, e.event, evt.param)
       moveFile(watchCmpFile, watchFile)
       events = @[]
