@@ -65,18 +65,24 @@ proc createSnapshot(self: NWatchDog, Snapshot: string) =
         echo ex.msg
   fr.close
 
+proc executeEvent(self: NWatchDog, event: tuple[file: string, event: NwatchEvent, id: string]) =
+  for evt in self.toWatch:
+    if evt.id == event.id:
+      evt.onEvent(event.file, event.event, evt.param)
+
 proc watch*(self: NWatchDog) {.async.} =
   ## start watch the registered directory
   if self.interval == 0:
     self.interval = 5000
   self.createSnapshot(watchFile)
-  var events: seq[tuple[file: string, event: NWatchEvent, id: string]] = @[]
-  var newFiles: seq[tuple[file: string, id: string]] = @[]
   while true:
+    self.createSnapshot(watchCmpFile)
+    var doEvent = false
     let snap = newFileStream(watchFile, fmRead)
+    let snapContent = snap.readAll
+    snap.setPosition(0)
     var line = ""
     while snap.readLine(line):
-      self.createSnapshot(watchCmpFile)
       let snapInfo = line.split("||")
       let snapCmp = newFileStream(watchCmpFile, fmRead)
       var cmpLine = ""
@@ -86,35 +92,21 @@ proc watch*(self: NWatchDog) {.async.} =
         if snapInfo[0] == snapCmpInfo[0]:
           isExists = true
           if snapInfo[2] != snapCmpInfo[2]:
-            events.add((snapCmpInfo[0], Modified, snapCmpInfo[4]))
-        # check if new file detected
-        if newFiles.any(proc (x: tuple[file: string, id: string]): bool =
-          x.file == snapCmpInfo[0]):
-          let snapNewFile = newFileStream(watchFile, fmRead)
-          var lineNewFile = ""
-          var isNewFile = true
-          while snapNewFile.readLine(lineNewFile):
-            if lineNewFile.startsWith(snapCmpInfo[0]):
-              isNewFile = false
-              break
-          if isNewFile:
-            newFiles.add((snapCmpInfo[0], snapCmpInfo[4]))
-          snapNewFile.close
+            doEvent = true
+            self.executeEvent((snapCmpInfo[0], Modified, snapCmpInfo[4]))
+
+        # new file detected
+        if not snapContent.contains(snapCmpInfo[0] & "||"):
+          self.executeEvent((snapCmpInfo[0], Created, snapCmpInfo[4]))
+
       if not isExists:
-        events.add((snapInfo[0], Deleted, snapInfo[4]))
+        doEvent = true
+        self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
       snapCmp.close
     snap.close
 
-    for newFile in newFiles:
-      events.add((newFile.file, Created, newFile.id))
-
-    if events.len != 0:
-      for e in events:
-        for evt in self.toWatch:
-          if evt.id == e.id:
-            evt.onEvent(e.file, e.event, evt.param)
+    if doEvent:
       moveFile(watchCmpFile, watchFile)
-      events = @[]
-      newFiles = @[]
+
     self.interval.sleep
     
