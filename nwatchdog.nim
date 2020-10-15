@@ -1,4 +1,4 @@
-import os, asyncdispatch, times, re, strutils, sequtils, streams, base64
+import os, asyncdispatch, times, re, strutils, sequtils, streams, base64, random
 export asyncdispatch
 
 type
@@ -103,6 +103,7 @@ proc watch*(self: NWatchDog) {.async.} =
         doEvent = true
         self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
       snapCmp.close
+      rand(5..30).sleep
     snap.close
 
     if doEvent:
