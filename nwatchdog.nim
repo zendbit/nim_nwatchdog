@@ -103,7 +103,7 @@ proc watch*(self: NWatchDog) {.async.} =
         doEvent = true
         self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
       snapCmp.close
-      rand(5..30).sleep
+      rand(1..20).sleep
     snap.close
 
     if doEvent:
