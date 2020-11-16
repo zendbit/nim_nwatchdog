@@ -87,6 +87,9 @@ proc watch*(self: NWatchDog) {.async.} =
       let snapCmp = newFileStream(watchCmpFile, fmRead)
       var cmpLine = ""
       var isExists = false
+      var sleepTime = 0
+      var maxSleepTime = rand(25..250)
+      #var maxSleepTime = 25
       while snapCmp.readLine(cmpLine):
         let snapCmpInfo = cmpLine.split("||")
         if snapInfo[0] == snapCmpInfo[0]:
@@ -99,11 +102,16 @@ proc watch*(self: NWatchDog) {.async.} =
         if not snapContent.contains(snapCmpInfo[0] & "||"):
           self.executeEvent((snapCmpInfo[0], Created, snapCmpInfo[4]))
 
+        sleepTime += 1
+        if sleepTime > maxSleepTime:
+          (maxSleepTime/25).int.sleep
+          maxSleepTime = rand(25..250)
+          sleepTime = 0
+
       if not isExists:
         doEvent = true
         self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
       snapCmp.close
-      rand(10..30).sleep
     snap.close
 
     if doEvent:
