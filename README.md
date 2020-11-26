@@ -24,7 +24,7 @@ let wd = NWatchDog[string](interval: 10000)
 wd.add(
   "/home/zendbit/test/jscript",
   "[\\w\\W]*\\.[(txt)|(js)]",
-  (proc (file: string, evt: NWatchEvent, param: string) =
+  (proc (file: string, evt: NWatchEvent, param: string) {.gcsafe async.} =
     echo param
     case evt
     of Created:
@@ -38,7 +38,7 @@ wd.add(
 wd.add(
   "/home/zendbit/test/csscript",
   "[\\w\\W]*\\.css]",
-  (proc (file: string, evt: NWatchEvent, param: string) =
+  (proc (file: string, evt: NWatchEvent, param: string) {.gcsafe async.} =
     echo param
     case evt
     of Created:

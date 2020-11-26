@@ -9,7 +9,7 @@ type
       id: string,
       dir: string,
       pattern: string,
-      onEvent: proc (file: string, nwEvent: NWatchEvent, param: T = nil),
+      onEvent: proc (file: string, nwEvent: NWatchEvent, param: T = nil) {.gcsafe async.},
       param: T]
 
   NWatchDog*[T] = ref object
@@ -19,13 +19,15 @@ type
     interval*: int
     toWatch*: seq[NwatchDogParam[T]]
 
-let watchFile = getAppDir().joinPath(".watch")
-let watchCmpFile = getAppDir().joinPath(".watch.cmp")
+var watchFile {.threadvar.}: string
+watchFile = getAppDir().joinPath(".watch")
+var watchCmpFile {.threadvar.}: string
+watchCmpFile = getAppDir().joinPath(".watch.cmp")
 
 proc add*[T](
   self: NWatchDog,
   dir: string, pattern: string,
-  onEvent: proc (file: string, nwEvent: NWatchEvent, param: T = nil),
+  onEvent: proc (file: string, nwEvent: NWatchEvent, param: T = nil) {.gcsafe async.},
   param: T = nil) =
   ## register new directory to watch when file changed
   self.toWatch.add((
@@ -65,12 +67,12 @@ proc createSnapshot(self: NWatchDog, Snapshot: string) =
         echo ex.msg
   fr.close
 
-proc executeEvent(self: NWatchDog, event: tuple[file: string, event: NwatchEvent, id: string]) =
+proc executeEvent(self: NWatchDog, event: tuple[file: string, event: NwatchEvent, id: string]) {.gcsafe async.} =
   for evt in self.toWatch:
     if evt.id == event.id:
-      evt.onEvent(event.file, event.event, evt.param)
+      await evt.onEvent(event.file, event.event, evt.param)
 
-proc watch*(self: NWatchDog) {.async.} =
+proc watch*(self: NWatchDog) {.gcsafe async.} =
   ## start watch the registered directory
   if self.interval == 0:
     self.interval = 5000
@@ -96,11 +98,11 @@ proc watch*(self: NWatchDog) {.async.} =
           isExists = true
           if snapInfo[2] != snapCmpInfo[2]:
             doEvent = true
-            self.executeEvent((snapCmpInfo[0], Modified, snapCmpInfo[4]))
+            await self.executeEvent((snapCmpInfo[0], Modified, snapCmpInfo[4]))
 
         # new file detected
         if not snapContent.contains(snapCmpInfo[0] & "||"):
-          self.executeEvent((snapCmpInfo[0], Created, snapCmpInfo[4]))
+          await self.executeEvent((snapCmpInfo[0], Created, snapCmpInfo[4]))
 
         sleepTime += 1
         if sleepTime > maxSleepTime:
@@ -110,7 +112,7 @@ proc watch*(self: NWatchDog) {.async.} =
 
       if not isExists:
         doEvent = true
-        self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
+        await self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
       snapCmp.close
     snap.close
 
