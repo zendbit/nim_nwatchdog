@@ -1,4 +1,4 @@
-import os, asyncdispatch, times, re, strutils, sequtils, streams, base64, random
+import os, asyncdispatch, times, re, strutils, sequtils, streams, base64, random, strformat
 export asyncdispatch
 
 type
@@ -79,45 +79,54 @@ proc watch*(self: NWatchDog) {.gcsafe async.} =
   self.createSnapshot(watchFile)
   while true:
     self.createSnapshot(watchCmpFile)
-    var doEvent = false
     let snap = newFileStream(watchFile, fmRead)
-    let snapContent = snap.readAll
-    snap.setPosition(0)
+    let snapCmp = newFileStream(watchCmpFile, fmRead)
+
     var line = ""
-    while snap.readLine(line):
-      let snapInfo = line.split("||")
-      let snapCmp = newFileStream(watchCmpFile, fmRead)
-      var cmpLine = ""
-      var isExists = false
-      var sleepTime = 0
-      var maxSleepTime = rand(25..250)
-      #var maxSleepTime = 25
-      while snapCmp.readLine(cmpLine):
-        let snapCmpInfo = cmpLine.split("||")
+    var lineCmp = ""
+    var doEvent = false
+
+    var contentCheck = snap.readAll()
+
+    # check new and modified file
+    while snapCmp.readLine(lineCmp):
+      var isNewFile = true
+      let snapCmpInfo = lineCmp.split("||")
+      let matchData = contentCheck.findAll(re &"({snapCmpInfo[0]}\\|\\|[\\w\\W]+?)+[\n]+")
+      for mdata in matchData:
+        let snapInfo = mdata.split("||")
+        # file modified
         if snapInfo[0] == snapCmpInfo[0]:
-          isExists = true
+          isNewFile = false
           if snapInfo[2] != snapCmpInfo[2]:
             doEvent = true
             await self.executeEvent((snapCmpInfo[0], Modified, snapCmpInfo[4]))
+      if isNewFile:
+        doEvent = true
+        await self.executeEvent((snapCmpInfo[0], Created, snapCmpInfo[4]))
 
-        # new file detected
-        if not snapContent.contains(snapCmpInfo[0] & "||"):
-          await self.executeEvent((snapCmpInfo[0], Created, snapCmpInfo[4]))
+      await (0.1).sleepAsync
 
-        sleepTime += 1
-        if sleepTime > maxSleepTime:
-          (maxSleepTime/25).int.sleep
-          maxSleepTime = rand(25..250)
-          sleepTime = 0
+    snapCmp.setPosition(0)
+    contentCheck = snapCmp.readAll()
 
-      if not isExists:
+    # check deleted file
+    snap.setPosition(0)
+    while snap.readLine(line):
+      let snapInfo = line.split("||")
+      let matchData = contentCheck.findAll(re &"({snapInfo[0]}\\|\\|[\\w\\W]+?)+[\n]+")
+
+      if matchData.len == 0:
         doEvent = true
         await self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
-      snapCmp.close
-    snap.close
+      
+      await (0.1).sleepAsync
 
+    snap.close()
+    snapCmp.close()
+    
     if doEvent:
       moveFile(watchCmpFile, watchFile)
 
-    self.interval.sleep
+    await self.interval.sleepAsync
     
