@@ -76,10 +76,7 @@ proc watch*(self: NWatchDog) {.gcsafe async.} =
   ## start watch the registered directory
   if self.interval == 0:
     self.interval = 5000
-
-  var rnd = initRand(10)
   self.createSnapshot(watchFile)
-
   while true:
     self.createSnapshot(watchCmpFile)
     let snap = newFileStream(watchFile, fmRead)
@@ -95,13 +92,18 @@ proc watch*(self: NWatchDog) {.gcsafe async.} =
     snap.setPosition(0)
     snapCmp.setPosition(0)
 
+    var processed = 0
+
     # check new and modified file
     while true:
       let snapReadStatus = snap.readLine(line)
       let snapCmpReadStatus = snapCmp.readLine(lineCmp)
 
       if not snapReadStatus and not snapCmpReadStatus:
+        processed = 0
         break
+      else:
+        processed += 1
 
       if snapCmpReadStatus:
         var isNewFile = true
@@ -127,8 +129,24 @@ proc watch*(self: NWatchDog) {.gcsafe async.} =
           doEvent = true
           await self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
 
+      if processed > 200:
+        await 5.sleepAsync
+        processed = 0
 
-      await rnd.rand(0..10).sleepAsync
+    #snapCmp.setPosition(0)
+    #contentCheck = snapCmp.readAll()
+
+    # check deleted file
+    #snap.setPosition(0)
+    #while snap.readLine(line):
+    #  let snapInfo = line.split("||")
+    #  let matchData = contentCheck.findAll(re &"({snapInfo[0]}\\|\\|[\\w\\W]+?)+[\n]+")
+
+    #  if matchData.len == 0:
+    #    doEvent = true
+    #    await self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
+      
+    #  await (0.1).sleepAsync
 
     snap.close()
     snapCmp.close()
