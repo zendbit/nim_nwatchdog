@@ -3,7 +3,7 @@ Simple watchdog (watch file change modified, deleted, created) in nim lang
 
 ### install
 ```shell
-nimble install nwatchdog
+nimble install nwatchdog@#head
 ```
 ### usage
 ```nim
