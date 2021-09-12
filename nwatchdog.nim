@@ -18,6 +18,7 @@ type
     ## will check each 5000 milisecond or 5 second
     interval*: int
     toWatch*: seq[NwatchDogParam[T]]
+    workdir*: string
 
 var watchFile {.threadvar.}: string
 watchFile = getAppDir().joinPath(".watch")
@@ -73,6 +74,11 @@ proc executeEvent(self: NWatchDog, event: tuple[file: string, event: NwatchEvent
       await evt.onEvent(event.file, event.event, evt.param)
 
 proc watch*(self: NWatchDog) {.gcsafe async.} =
+  ## override watch logger location if workdir exists
+  if self.workdir != "" and self.workdir.dirExists:
+    watchfile = self.workdir.joinPath(".watch")
+    watchCmpFile = self.workdir.joinPath(".watch.cmp")
+
   ## start watch the registered directory
   if self.interval == 0:
     self.interval = 5000
