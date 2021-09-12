@@ -14,6 +14,13 @@ nimble install nwatchdog@#head
 ## default interval is 5000 milisecond (5 second)
 let wd = NWatchDog[string](interval: 10000)
 
+## to prevent conflict on multiple instance nwatchdog can beresolve using workdir and instanceid
+## or one of them
+##
+## let wd1 = NWatchDog[string](interval: 10000, workdir:"/tmp", instanceid:"removejunk")
+## let wd2 = NWatchDog[string](interval: 10000, workdir:"/tmp", instanceid:"removejunk2")
+##
+
 ## add directory to watch, with file pattern to watch
 ## the pattern using pcre from stdlib
 ## example we want to listen directory and listen all .txt and .js
