@@ -18,7 +18,13 @@ type
     ## will check each 5000 milisecond or 5 second
     interval*: int
     toWatch*: seq[NwatchDogParam[T]]
+    ## workdir is directory for saving the temporary snapshot file structure
+    ## this usefull when working with multiple nwatchdog instances
+    ## this is optional
     workdir*: string
+    ## instanceid is instanceid for the tamporary snapshot name to make sure not conflict with other nwatchdog instance id
+    ## this is optional
+    instanceid*: string
 
 var watchFile {.threadvar.}: string
 watchFile = getAppDir().joinPath(".watch")
@@ -76,8 +82,13 @@ proc executeEvent(self: NWatchDog, event: tuple[file: string, event: NwatchEvent
 proc watch*(self: NWatchDog) {.gcsafe async.} =
   ## override watch logger location if workdir exists
   if self.workdir != "" and self.workdir.dirExists:
-    watchfile = self.workdir.joinPath(".watch")
+    watchFile = self.workdir.joinPath(".watch")
     watchCmpFile = self.workdir.joinPath(".watch.cmp")
+
+  ## override watch logger name if instanceid set
+  if self.instanceid != "":
+    watchFile = watchFile & "." & self.instanceid
+    watchCmpFile = watchCmpFile & "." & self.instanceid
 
   ## start watch the registered directory
   if self.interval == 0:
