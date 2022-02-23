@@ -1,23 +1,39 @@
-import os, asyncdispatch, times, re, strutils, sequtils, streams, base64, random, strformat
+import
+  os,
+  asyncdispatch,
+  times,
+  re,
+  strutils,
+  sequtils,
+  streams,
+  base64,
+  random,
+  strformat
+
 export asyncdispatch
 
 type
   NWatchEvent* = enum
-    Created, Modified, Deleted
+    Created,
+    Modified,
+    Deleted
 
-  NwatchDogParam*[T] = tuple[
-      id: string,
-      dir: string,
-      pattern: string,
-      onEvent: proc (file: string, nwEvent: NWatchEvent, param: T = nil) {.gcsafe async.},
-      param: T]
+  NWatchDogParam*[T] = tuple[
+    id: string,
+    dir: string,
+    pattern: string,
+    onEvent: proc (
+      file: string,
+      nwEvent: NWatchEvent,
+      param: T = nil) {.gcsafe async.},
+    param: T]
 
   NWatchDog*[T] = ref object
     ## NWatchDog object
     ## NWatchDog(interval: 5000)
     ## will check each 5000 milisecond or 5 second
     interval*: int
-    toWatch*: seq[NwatchDogParam[T]]
+    toWatch*: seq[NWatchDogParam[T]]
     ## workdir is directory for saving the temporary snapshot file structure
     ## this usefull when working with multiple nwatchdog instances
     ## this is optional
@@ -33,12 +49,17 @@ watchCmpFile = getAppDir().joinPath(".watch.cmp")
 
 proc add*[T](
   self: NWatchDog,
-  dir: string, pattern: string,
-  onEvent: proc (file: string, nwEvent: NWatchEvent, param: T = nil) {.gcsafe async.},
+  dir: string,
+  pattern: string,
+  onEvent: proc (
+    file: string,
+    nwEvent: NWatchEvent,
+    param: T = nil) {.gcsafe async.},
   param: T = nil) =
   ## register new directory to watch when file changed
+  let id = now().utc().format("YYYY-MM-dd HH:mm:ss:fffffffff")
   self.toWatch.add((
-    dir.encode,
+    (&"{dir}-{id}").encode,
     dir,
     pattern,
     onEvent,
@@ -47,15 +68,24 @@ proc add*[T](
 proc delete*[T](self: NWatchDog, dir: string) =
   ## delete directory from watch
   self.toWatch = self.toWatch.filter(
-    proc (x: NwatchDogParam[T]): bool =
+    proc (x: NWatchDogParam[T]): bool =
       x.dir != dir)
 
-proc watchFormat(file, createTime, modifTime, accessTime, id: string): string =
+proc watchFormat(
+  file,
+  createTime,
+  modifTime,
+  accessTime,
+  id: string): string =
+
   ## set watch format file
   ## used by internal watch system
   return file & "||" & createTime & "||" & modifTime & "||" & accessTime & "||" & id
 
-proc createSnapshot(self: NWatchDog, Snapshot: string) =
+proc createSnapshot(
+  self: NWatchDog,
+  Snapshot: string) =
+
   ## create snapshot of file in the directory
   ## used by internal watch system
   let fr = newFileStream(Snapshot, fmWrite)
@@ -74,12 +104,23 @@ proc createSnapshot(self: NWatchDog, Snapshot: string) =
         echo ex.msg
   fr.close
 
-proc executeEvent(self: NWatchDog, event: tuple[file: string, event: NwatchEvent, id: string]) {.gcsafe async.} =
+proc executeEvent[T](
+  self: NWatchDog[T],
+  event: tuple[
+    file: string,
+    event: NWatchEvent,
+    id: string]) {.gcsafe async.} =
+
+  var watchEvent: NWatchDogParam[T]
   for evt in self.toWatch:
     if evt.id == event.id:
-      await evt.onEvent(event.file, event.event, evt.param)
+      watchEvent = evt
+      break
+
+  await watchEvent.onEvent(event.file, event.event, watchEvent.param)
 
 proc watch*(self: NWatchDog) {.gcsafe async.} =
+
   ## override watch logger location if workdir exists
   if self.workdir != "" and self.workdir.dirExists:
     watchFile = self.workdir.joinPath(".watch")
