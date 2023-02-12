@@ -28,7 +28,7 @@ type
       param: T = nil) {.gcsafe async.},
     param: T]
 
-  NWatchDog*[T] = ref object
+  NWatchDog*[T] = ref object of RootObj
     ## NWatchDog object
     ## NWatchDog(interval: 5000)
     ## will check each 5000 milisecond or 5 second
