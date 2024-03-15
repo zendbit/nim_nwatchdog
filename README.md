@@ -30,7 +30,7 @@ let wd = NWatchDog[string](interval: 10000)
 ## param is string because we defined generic in string let wd = NWatchDog[string]()
 wd.add(
   "/home/zendbit/test/jscript",
-  "[\\w\\W]*\\.[(txt)|(js)]",
+  "[\\w\\W]*\\.[(txt)|(js)]+$",
   (proc (file: string, evt: NWatchEvent, param: string) {.gcsafe async.} =
     echo param
     case evt
@@ -44,7 +44,7 @@ wd.add(
   
 wd.add(
   "/home/zendbit/test/csscript",
-  "[\\w\\W]*\\.css]",
+  "[\\w\\W]*\\.[(css)]+$",
   (proc (file: string, evt: NWatchEvent, param: string) {.gcsafe async.} =
     echo param
     case evt
