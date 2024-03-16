@@ -29,7 +29,7 @@ let wd = NWatchDog[string](interval: 10000)
 ## proc (file: string, evt: NWatchEvent, param: string)
 ## param is string because we defined generic in string let wd = NWatchDog[string]()
 wd.add(
-  "/home/zendbit/test/jscript",
+  "/home/zendbit/test/jscript", ## allow tilde here ~/test/jscript
   "[\\w\\W]*\\.[(txt)|(js)]+$",
   (proc (file: string, evt: NWatchEvent, param: string) {.gcsafe async.} =
     echo param
@@ -43,7 +43,7 @@ wd.add(
   "this param will pass to the event callback watch js and txt")
   
 wd.add(
-  "/home/zendbit/test/csscript",
+  "/home/zendbit/test/csscript", ## allow tilde here ~/test/csscript
   "[\\w\\W]*\\.[(css)]+$",
   (proc (file: string, evt: NWatchEvent, param: string) {.gcsafe async.} =
     echo param
