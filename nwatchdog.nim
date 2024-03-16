@@ -178,7 +178,7 @@ proc watch*(self: NWatchDog) {.gcsafe async.} =
 
       if snapReadStatus:
         let snapInfo = line.split("||")
-        if not snapCmpContent.match(re2 &"({snapInfo[0]}\\|\\|[\\w\\W]+?)+[\n]+"):
+        if not snapCmpContent.contains(re2 &"({snapInfo[0]}\\|\\|[\\w\\W]+?)+[\n]+"):
           doEvent = true
           await self.executeEvent((snapInfo[0], Deleted, snapInfo[4]))
 
