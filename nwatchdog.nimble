@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.0"
+version       = "0.2.2"
 author        = "Amru Rosyada"
 description   = "Simple watchdog (watch file changes modified, deleted, created) in nim lang."
 license       = "BSD"
