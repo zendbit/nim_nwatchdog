@@ -58,9 +58,10 @@ proc add*[T](
   param: T = nil) =
   ## register new directory to watch when file changed
   let id = now().utc().format("YYYY-MM-dd HH:mm:ss:fffffffff")
+  let dirToWatch = dir.expandTilde
   self.toWatch.add((
-    (&"{dir}-{id}").encode,
-    dir,
+    (&"{dirToWatch}-{id}").encode,
+    dirToWatch,
     pattern,
     onEvent,
     param))
