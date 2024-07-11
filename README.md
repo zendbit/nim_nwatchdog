@@ -7,6 +7,9 @@ nimble install nwatchdog@#head
 ```
 ### usage
 ```nim
+## import nwatchdog
+import nwatchdog
+
 ## create new watchdog
 ## let wd = NWatchDog[T]()
 ## generic T is parameter will pass to the event callback
