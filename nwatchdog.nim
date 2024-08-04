@@ -43,9 +43,9 @@ type
     instanceid*: string
 
 var watchFile {.threadvar.}: string
-watchFile = getAppDir().joinPath(".watch")
+watchFile = getCurrentDir().joinPath(".watch")
 var watchCmpFile {.threadvar.}: string
-watchCmpFile = getAppDir().joinPath(".watch.cmp")
+watchCmpFile = getCurrentDir().joinPath(".watch.cmp")
 
 proc add*[T](
   self: NWatchDog,
@@ -121,9 +121,14 @@ proc executeEvent[T](
   await watchEvent.onEvent(event.file, event.event, watchEvent.param)
 
 proc watch*(self: NWatchDog) {.gcsafe async.} =
+  ## watch with NWatchDog instance configuration
+
+  if self.workdir != "" and not self.workdir.dirExists:
+    ## check workdir if overriden and not exist
+    self.workdir.createDir
 
   ## override watch logger location if workdir exists
-  if self.workdir != "" and self.workdir.dirExists:
+  if self.workdir.dirExists:
     watchFile = self.workdir.joinPath(".watch")
     watchCmpFile = self.workdir.joinPath(".watch.cmp")
 
