@@ -152,3 +152,18 @@ above command will call taskname configuration from current nwatch.json. Example
     }
 }
 ```
+
+let start to try using example, we need to create some folder
+- create **testapp** dir
+- inside testapp dir create **src** dir for source directory
+- inside testapp dir create **bin** dir for binary executable
+- then create example app inside src dir, in this case we create **src/testapp.nim**
+
+or you can create using nimble command, for example create directory **testapp**, then inside then **testapp** dir execute nimble init command. For this example we can select binary app template on nimble init.
+```
+mkdir testapp
+cd testapp
+nimble init
+```
+
+in the nimble not contains bin directory so we need to create it manually. The directory structure look like this
