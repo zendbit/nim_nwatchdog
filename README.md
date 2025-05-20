@@ -62,3 +62,263 @@ wd.add(
 # watch the file changes
 waitFor wd.watch
 ```
+
+### using nwatch binary command
+NWatchDog now include nwatch command, the command will take some parameter
+```bash
+nwatch -t:taskname -c:nwatch.json
+```
+
+- **-t** mean task to call and watch
+- **-c** mean nwatch configuration in json format
+
+if **-c** not given or nwatch json configuration not provided, nwatch will automatic find for **nwatch.json** in the same directory, if not found then will return error
+
+```bash
+nwatch taskname
+```
+
+above command will call taskname configuration from current nwatch.json. Example nwatch json available here [https://github.com/zendbit/nim_nwatchdog/blob/master/nwatch.json.example](https://github.com/zendbit/nim_nwatchdog/blob/master/nwatch.json.example)
+
+
+```json
+{
+    "define": {
+        "srcDir": "src",
+        "binDir": "bin",
+        "main": "app.nim",
+        "mainExec": "app",
+        "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
+    },
+    "interval": 100,
+    "instanceId": "example-app-001",
+    "task": {
+        "buildAndRun": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "onCreated": [],
+            "onModified": [
+                "<task.build.command.default>",
+                "<task.run.command.default>"
+            ],
+            "onDeleted": []
+        },
+        "build": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.build.command.default>"],
+            "onDeleted": []
+        },
+        "run": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "<define.binDir>::<define.mainExec>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "posix": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.run.command.default>"],
+            "onDeleted": []
+        }
+    }
+}
+```
+
+let start to try using example, we need to create some folder
+- create **testapp** dir
+- inside testapp dir create **src** dir for source directory
+- inside testapp dir create **bin** dir for binary executable
+- then create example app inside src dir, in this case we create **src/testapp.nim**
+
+or you can create using nimble command, for example create directory **testapp**, then inside **testapp** dir execute nimble init command. For this example we can select binary app template on nimble init.
+```
+mkdir testapp
+cd testapp
+nimble init
+```
+
+in the nimble not contains bin directory so we need to create it manually. The directory structure look like this
+
+<img src="https://github.com/zendbit/readme-assets/blob/main/Screenshot%20From%202025-05-20%2022-28-46.png">
+
+before we start, we need to do some changes on nwatch.json define section, change **main** to **testapp.nim** and **mainExec** to **testapp** and **instanceId** match with project name for this example is **testapp**
+
+```json
+"define": {
+    "srcDir": "src",
+    "binDir": "bin",
+    "main": "testapp.nim",
+    "mainExec": "testapp",
+    "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
+}
+```
+
+actually, inside define object is not mandatory, it's just like define some constants that we can reuse on the other section.
+
+if you see tag like this
+
+```
+<define.srcDir>
+```
+
+above tag will replaced with **define["srcDir"]** value
+
+now we have nwatch.json look like this
+
+```json
+{
+    "define": {
+        "srcDir": "src",
+        "binDir": "bin",
+        "main": "testapp.nim",
+        "mainExec": "testapp",
+        "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
+    },
+    "interval": 100,
+    "instanceId": "testapp",
+    "task": {
+        "buildAndRun": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "onCreated": [],
+            "onModified": [
+                "<task.build.command.default>",
+                "<task.run.command.default>"
+            ],
+            "onDeleted": []
+        },
+        "build": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.build.command.default>"],
+            "onDeleted": []
+        },
+        "run": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "<define.binDir>::<define.mainExec>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "posix": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.run.command.default>"],
+            "onDeleted": []
+        }
+    }
+}
+```
+
+there are three task defines inside task section which is
+- buildAndRun
+- build
+- run
+
+***The name is not mandatory, you can pick with others name***
+
+now from the **testapp** folder you can call one of the task
+
+if you want to watch buildAndRun task you can do with this command
+
+```bash
+nwatch buildAndRun
+```
+
+**WALAA....!!** now each time we do changes to **src/testapp.nim**, will automatically compile and run the app
+
+each task can have different pattern for listening for example we want to listen each time file .js modified and want to run some command task
+
+```json
+"task": {
+  "build": {
+      "path": "<define.srcDir>",
+      "pattern": "[\\w\\W]*\\.[(js)]+$",
+      "command": {
+          "default": {
+              "linux": [
+                  "some cmd",
+                  "others cmd",
+                  "and the others"
+              ],
+              "macosx": [],
+              "windows": [],
+              "netbsd": [],
+              "freebsd": [],
+              "openbsd": [],
+              "solaris": [],
+              "aix": [],
+              "haiku": [],
+              "standalone": []
+          }
+      },
+      "onCreated": [],
+      "onModified": ["<task.build.command.default>"],
+      "onDeleted": []
+  }
+}
+```
+
+nwatch will automatically pick the command depend on the host os, in this case my host os is linux so the command will automatic call all command inside linux section
+
+***note***
+- we can use tag "<x.y.z>" to refer to others attribute or object
+- we can use :: for directory separator, the nwatch will automatically replace that part into host os directory separator
