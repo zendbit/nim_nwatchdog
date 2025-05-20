@@ -80,6 +80,7 @@ nwatch taskname
 
 above command will call taskname configuration from current nwatch.json. Example nwatch json available here [https://github.com/zendbit/nim_nwatchdog/blob/master/nwatch.json.example](https://github.com/zendbit/nim_nwatchdog/blob/master/nwatch.json.example)
 
+
 ```json
 {
     "define": {
