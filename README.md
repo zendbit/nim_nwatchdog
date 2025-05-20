@@ -62,3 +62,93 @@ wd.add(
 # watch the file changes
 waitFor wd.watch
 ```
+
+### using nwatch binnary command
+NWatchDog now include nwatch command, the command will take some parameter
+```bash
+nwatch -t:taskname -c:nwatch.json
+```
+
+- **-t** mean task to call and watch
+- **-c** mean nwatch configuration in json format
+
+if **-c** not given or nwatch json configuration not provided, nwatch will automatic find for **nwatch.json** in the same directory, if not found then will return error
+
+```bash
+nwatch taskname
+```
+
+above command will call taskname configuration from current nwatch.json. Example nwatch json available here [https://github.com/zendbit/nim_nwatchdog/blob/master/nwatch.json.example](https://github.com/zendbit/nim_nwatchdog/blob/master/nwatch.json.example)
+
+```json
+{
+    "define": {
+        "srcDir": "src",
+        "binDir": "bin",
+        "main": "app.nim",
+        "mainExec": "app",
+        "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
+    },
+    "interval": 100,
+    "instanceId": "example-app-001",
+    "task": {
+        "buildAndRun": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "onCreated": [],
+            "onModified": [
+                "<task.build.command.default>",
+                "<task.run.command.default>"
+            ],
+            "onDeleted": []
+        },
+        "build": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.build.command.default>"],
+            "onDeleted": []
+        },
+        "run": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "<define.binDir>::<define.mainExec>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "posix": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.run.command.default>"],
+            "onDeleted": []
+        }
+    }
+}
+```
