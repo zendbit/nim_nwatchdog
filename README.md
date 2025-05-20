@@ -109,7 +109,7 @@ above command will call taskname configuration from current nwatch.json. Example
             "command": {
                 "default": {
                     "linux": [
-                        "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>"
+                        {"cmd": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
                     ],
                     "macosx": [],
                     "windows": [],
@@ -132,7 +132,7 @@ above command will call taskname configuration from current nwatch.json. Example
             "command": {
                 "default": {
                     "linux": [
-                        "<define.binDir>::<define.mainExec>"
+                        {"cmd": "<define.binDir>::<define.mainExec>", "ignoreFail": false}
                     ],
                     "macosx": [],
                     "windows": [],
@@ -223,7 +223,7 @@ now we have nwatch.json look like this
             "command": {
                 "default": {
                     "linux": [
-                        "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>"
+                        {"cmd": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
                     ],
                     "macosx": [],
                     "windows": [],
@@ -246,7 +246,7 @@ now we have nwatch.json look like this
             "command": {
                 "default": {
                     "linux": [
-                        "<define.binDir>::<define.mainExec>"
+                        {"cmd": "<define.binDir>::<define.mainExec>", "ignoreFail": false}
                     ],
                     "macosx": [],
                     "windows": [],
