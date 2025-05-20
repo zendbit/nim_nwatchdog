@@ -9,8 +9,8 @@ import
   base64,
   random,
   strformat
-
 export asyncdispatch
+
 
 type
   NWatchEvent* = enum
@@ -42,10 +42,12 @@ type
     ## this is optional
     instanceid*: string
 
+
 var watchFile {.threadvar.}: string
 watchFile = getCurrentDir().joinPath(".watch")
 var watchCmpFile {.threadvar.}: string
 watchCmpFile = getCurrentDir().joinPath(".watch.cmp")
+
 
 proc add*[T](
   self: NWatchDog,
@@ -66,11 +68,13 @@ proc add*[T](
     onEvent,
     param))
 
+
 proc delete*[T](self: NWatchDog, dir: string) =
   ## delete directory from watch
   self.toWatch = self.toWatch.filter(
     proc (x: NWatchDogParam[T]): bool =
       x.dir != dir)
+
 
 proc watchFormat(
   file,
@@ -82,6 +86,7 @@ proc watchFormat(
   ## set watch format file
   ## used by internal watch system
   return file & "||" & createTime & "||" & modifTime & "||" & accessTime & "||" & id
+
 
 proc createSnapshot(
   self: NWatchDog,
@@ -105,6 +110,7 @@ proc createSnapshot(
         echo ex.msg
   fr.close
 
+
 proc executeEvent[T](
   self: NWatchDog[T],
   event: tuple[
@@ -119,6 +125,7 @@ proc executeEvent[T](
       break
 
   await watchEvent.onEvent(event.file, event.event, watchEvent.param)
+
 
 proc watch*(self: NWatchDog) {.gcsafe async.} =
   ## watch with NWatchDog instance configuration
@@ -193,9 +200,9 @@ proc watch*(self: NWatchDog) {.gcsafe async.} =
 
     snap.close()
     snapCmp.close()
-    
+
     if doEvent:
       moveFile(watchCmpFile, watchFile)
 
     await self.interval.sleepAsync
-    
+
