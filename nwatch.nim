@@ -12,7 +12,8 @@ import
     files,
     strformat,
     appdirs,
-    dirs
+    dirs,
+    asyncfile
   ]
 from std/os import getAppDir
 from std/osproc import execCmd
@@ -125,8 +126,6 @@ proc help() = ## \
   ## print help
 
   echo ""
-  echo "NWatchDog file watcher, see https://github.com/zendbit/nim_nwatchdog"
-  echo ""
   echo "Usage:"
   echo "\tnwatch taskname [-c:nwatch.json | --config:nwatch.json]"
   echo "\tnwatch -t:taskname [-c:nwatch.json | --config:nwatch.json]"
@@ -154,20 +153,24 @@ proc watchTask*(self: NWatch, task: string) {.gcsafe async.} = ## \
         proc runCmd(tasks: JsonNode) {.gcsafe async.} = ## \
           ## execute task command
           if tasks.isNil: return
-          var taskList: seq[string]
+          var taskList: seq[JsonNode]
           for task in tasks:
             if task.kind == JArray:
-              taskList &= task.to(seq[string])
+              taskList &= task.to(seq[JsonNode])
             else:
-              taskList.add(task.getStr)
+              taskList.add(task)
 
           for cmd in taskList:
-            if cmd.
+            let errCode = cmd{"cmd"}.getStr.
               replace("<filePath>", file).
               replace("<fileName>", $name).
               replace("<fileDir>", $dir).
               replace("<fileExt>", $ext).
-              execCmd != 0: break
+              execCmd
+
+            if errCode != 0 and
+              not cmd{"ignoreFail"}.isNil and
+              not cmd{"ignoreFail"}.getBool: break
 
         case evt
         of Created:
