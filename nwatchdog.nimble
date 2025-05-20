@@ -9,5 +9,5 @@ bin         = @["nwatch"]
 
 # Dependencies
 
-requires "nim >= 1.0.0"
+requires "nim >= 2.0.0"
 requires "regex >= 0.21.0"
