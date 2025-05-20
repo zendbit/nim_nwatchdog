@@ -1,0 +1,70 @@
+{
+    "define": {
+        "srcDir": "src",
+        "binDir": "bin",
+        "main": "app.nim",
+        "mainExec": "app",
+        "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
+    },
+    "interval": 100,
+    "instanceId": "example-app-001",
+    "task": {
+        "buildAndRun": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "onCreated": [],
+            "onModified": [
+                "<task.build.command.default>",
+                "<task.run.command.default>"
+            ],
+            "onDeleted": []
+        },
+        "build": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.build.command.default>"],
+            "onDeleted": []
+        },
+        "run": {
+            "path": "<define.srcDir>",
+            "pattern": "<define.nimFilePattern>",
+            "command": {
+                "default": {
+                    "linux": [
+                        "<define.binDir>::<define.mainExec>"
+                    ],
+                    "macosx": [],
+                    "windows": [],
+                    "netbsd": [],
+                    "freebsd": [],
+                    "openbsd": [],
+                    "solaris": [],
+                    "aix": [],
+                    "haiku": [],
+                    "posix": [],
+                    "standalone": []
+                }
+            },
+            "onCreated": [],
+            "onModified": ["<task.run.command.default>"],
+            "onDeleted": []
+        }
+    }
+}
