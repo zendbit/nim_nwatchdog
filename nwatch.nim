@@ -12,8 +12,7 @@ import
     files,
     strformat,
     appdirs,
-    dirs,
-    asyncfile
+    dirs
   ]
 from std/os import getAppDir
 from std/osproc import execCmd
