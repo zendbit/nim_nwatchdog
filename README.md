@@ -322,3 +322,10 @@ nwatch will automatically pick the command depend on the host os, in this case m
 ***note***
 - we can use tag "<x.y.z>" to refer to others attribute or object
 - we can use :: for directory separator, the nwatch will automatically replace that part into host os directory separator
+
+### Direct call task without watch
+In some cases we want to call the command without watch file changes, we can pass **--dontWatch** to nwatch command
+- nwatch task.<taskname_to_call>.command.<identifier> --dontWatch
+```bash
+nwatch task.build.command.default --dontWatch
+```
