@@ -23,7 +23,7 @@ type
     nWatchConfig: T
 
 
-proc findValue(
+proc findValue*(
     jnode: JsonNode,
     key: string
   ): JsonNode = ## \
@@ -40,50 +40,63 @@ proc findValue(
     result = jnode{key}
 
 
-proc parseConfig(self: JsonNode): JsonNode = ## \
+proc parseConfig*(nWatchConfig: JsonNode): JsonNode = ## \
   ## normalize json config
   ## replace all variable string
   ## with correct value
 
   var matches = newSeq[string]()
-  let nWatchConfigStr = $self
-  var nWatchConfigStrResult = $self
-  for m in findAll(nWatchConfigStr, re2"(<[\d\w\\._\\-]+>)"):
+  let nWatchConfigStr = $nWatchConfig
+  var nWatchConfigStrResult = $nWatchConfig
+  var varList = findAll(nWatchConfigStr, re2"(<[\d\w\\._\\-]+>)")
+  for m in varList:
     var valueToReplace = nWatchConfigStr[m.boundaries]
     let valueReplacement =
-      self.
+      nWatchConfig.
       findValue(valueToReplace.replace("<", "").replace(">", ""))
 
-    if not valueReplacement.isNil:
-      let isTaskList: bool = valueToReplace.startsWith("<task") and
-        valueToReplace.contains(".command.")
-      var cleanValue = $valueReplacement
+    if valueReplacement.isNil:
+      raise newException(
+        KeyError,
+        @[
+          "\nFail when parse nwatch json file:\n",
+          valueToReplace.replace("<", "").replace(">", ""),
+          " key not found!.\n",
+        ].join("")
+      )
 
-      case valueReplacement.kind
-      of JObject:
-        if isTaskList:
-          cleanValue = $valueReplacement{hostOS}
-        valueToReplace = &"\"{valueToReplace}\""
-      of JArray:
-        valueToReplace = &"\"{valueToReplace}\""
-      else: discard
+    let isTaskList: bool = valueToReplace.startsWith("<task") and
+      valueToReplace.contains(".command.")
+    var cleanValue = $valueReplacement
 
-      if cleanValue.startsWith("\""):
-        cleanValue = cleanValue[1..cleanValue.high]
-      if cleanValue.endsWith("\""):
-        cleanValue = cleanValue[0..^2]
+    case valueReplacement.kind
+    of JObject:
+      if isTaskList:
+        cleanValue = $valueReplacement{hostOS}
+      valueToReplace = &"\"{valueToReplace}\""
+    of JArray:
+      valueToReplace = &"\"{valueToReplace}\""
+    else: discard
 
-      nWatchConfigStrResult = nWatchConfigStrResult.
-        replace(valueToReplace, cleanValue)
+    if cleanValue.startsWith("\""):
+      cleanValue = cleanValue[1..cleanValue.high]
+    if cleanValue.endsWith("\""):
+      cleanValue = cleanValue[0..^2]
 
-  nWatchConfigStrResult.
+    nWatchConfigStrResult = nWatchConfigStrResult.
+      replace(valueToReplace, cleanValue)
+
+  result = nWatchConfigStrResult.
     replace("::", $DirSep).
     replace("appDir", getAppDir()).
     replace("currentDir", $getCurrentDir()).
     parseJson
 
+  if findAll($result, re2"(<[\d\w\\._\\-]+>)").len != 0:
+    result = result.parseConfig
 
-proc newNWatch(path: Path): NWatch[JsonNode] = ## \
+
+proc newNWatch*(path: Path): NWatch[JsonNode] = ## \
   ## parse nwatch.json file
 
   try:
@@ -130,15 +143,57 @@ proc help() = ## \
   echo "\tnwatch -t:taskname [-c:nwatch.json | --config:nwatch.json]"
   echo "\tnwatch -task:taskname [-c:nwatch.json | --config:nwatch.json]"
   echo ""
+  echo "Direct call command without watch, pass --dontWatch:"
+  echo "\tnwatch task.<taskname_to_call>.command.<identifier> --dontWatch"
+  echo "\tnwatch task.build.command.default --dontWatch"
+  echo ""
 
 
-proc watchTask*(self: NWatch, task: string) {.gcsafe async.} = ## \
+proc runTask(
+    tasks: JsonNode,
+    replace: seq[tuple[key: string, val: string]] = @[]
+  ) {.gcsafe async.} = ## \
+  ## execute task command
+
+  var taskList: seq[JsonNode]
+  for task in tasks:
+    if task.kind == JArray:
+      taskList &= task.to(seq[JsonNode])
+    else:
+      taskList.add(task)
+
+  for cmd in taskList:
+    var cmdStr = cmd{"cmd"}.getStr
+    for (key, val) in replace:
+      cmdStr = cmdStr.replace(key, val)
+
+    if cmdStr.execCmd != 0 and
+      not cmd{"ignoreFail"}.isNil and
+      not cmd{"ignoreFail"}.getBool:
+      echo &"error: fail to execute\n\t{cmdStr}"
+      break
+
+
+proc watchTask*(
+    self: NWatch,
+    task: string,
+    watch: bool = true
+  ) {.gcsafe async.} = ## \
   ## parse argument and watch task by argument
   ## find task from nwatch.json
+  ## if just want to execute task without watch
+  ## set watch to false
 
   var taskToWatch = self.nWatchConfig{"task"}{task}
+  if not watch:
+    taskToWatch = self.nWatchConfig.findValue(task){hostOS}
+
   if taskToWatch.isNil:
     echo &"error: {task} task not found!."
+    return
+
+  if not watch:
+    await taskToWatch.runTask
     return
 
   self.nWatchDog.add(
@@ -149,35 +204,20 @@ proc watchTask*(self: NWatch, task: string) {.gcsafe async.} = ## \
       evt: NWatchEvent,
       task: JsonNode) {.gcsafe async.} =
         let (dir, name, ext) = file.Path.splitFile
-        proc runCmd(tasks: JsonNode) {.gcsafe async.} = ## \
-          ## execute task command
-          if tasks.isNil: return
-          var taskList: seq[JsonNode]
-          for task in tasks:
-            if task.kind == JArray:
-              taskList &= task.to(seq[JsonNode])
-            else:
-              taskList.add(task)
-
-          for cmd in taskList:
-            let errCode = cmd{"cmd"}.getStr.
-              replace("<filePath>", file).
-              replace("<fileName>", $name).
-              replace("<fileDir>", $dir).
-              replace("<fileExt>", $ext).
-              execCmd
-
-            if errCode != 0 and
-              not cmd{"ignoreFail"}.isNil and
-              not cmd{"ignoreFail"}.getBool: break
+        let replace = @[
+          ("<filePath>", file),
+          ("<fileName>", $name),
+          ("<fileDir>", $dir),
+          ("<fileExt>", $ext)
+        ]
 
         case evt
         of Created:
-          await task{"onCreated"}.runCmd
+          await task{"onCreated"}.runTask(replace)
         of Modified:
-          await task{"onModified"}.runCmd
+          await task{"onModified"}.runTask(replace)
         of Deleted:
-          await task{"onDeleted"}.runCmd
+          await task{"onDeleted"}.runTask(replace)
     ),
     taskToWatch
   )
@@ -189,6 +229,7 @@ when isMainModule:
   var
     nWatchConfig: string = $(getCurrentDir()/"nwatch.json".Path)
     nWatchTask: string
+    watch: bool = true
   ## parse command line
   for kind, key, val in getOpt():
     case kind
@@ -206,6 +247,8 @@ when isMainModule:
         nWatchTask = val
       of "config":
         nWatchConfig = val
+      of "dontWatch":
+        watch = false
     of cmdEnd: discard
 
   if not nWatchConfig.Path.fileExists or nWatchTask == "":
@@ -214,4 +257,4 @@ when isMainModule:
       echo "error: nwatch.json not found!."
     help()
   else:
-    waitFor newNwatch(nWatchConfig.Path).watchTask(nWatchTask)
+    waitFor newNwatch(nWatchConfig.Path).watchTask(nWatchTask, watch)
