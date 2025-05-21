@@ -40,13 +40,15 @@ proc findValue*(
     result = jnode{key}
 
 
-proc parseConfig*(nWatchConfig: JsonNode): JsonNode = ## \
+proc parseConfig*(
+    nWatchConfig: JsonNode
+  ): JsonNode = ## \
   ## normalize json config
   ## replace all variable string
   ## with correct value
 
   var matches = newSeq[string]()
-  let nWatchConfigStr = $nWatchConfig
+  var nWatchConfigStr = $nWatchConfig
   var nWatchConfigStrResult = $nWatchConfig
   var varList = findAll(nWatchConfigStr, re2"(<[\d\w\\._\\-]+>)")
   for m in varList:
@@ -96,11 +98,27 @@ proc parseConfig*(nWatchConfig: JsonNode): JsonNode = ## \
     result = result.parseConfig
 
 
-proc newNWatch*(path: Path): NWatch[JsonNode] = ## \
+proc newNWatch*(
+    path: Path,
+    data: JsonNode = nil
+  ): NWatch[JsonNode] = ## \
   ## parse nwatch.json file
 
   try:
-    let nWatchJson = parseFile($path)
+    var nWatchJson = parseFile($path)
+    if not data.isNil:
+      ## apply data from command line
+      ## replace key, value from data
+      ## the data should simple
+      ## only string and numeric value allowed
+      var nWatchConfigStr = $nWatchJson
+      for k, v in data:
+        var val = ($v).strip
+        if v.kind == JString: val = val.substr(1, val.high - 1)
+        nWatchConfigStr = nWatchConfigStr.replace(&"<{k}>", val)
+
+      nWatchJson = nWatchConfigStr.parseJson
+
     let define = nWatchJson{"define"}
     let interval = nWatchJson{"interval"}
     let instanceId = nWatchJson{"instanceId"}
@@ -138,14 +156,24 @@ proc help() = ## \
   ## print help
 
   echo ""
+  echo "See https://github.com/zendbit/nim_nwatchdog for more informations"
+  echo ""
   echo "Usage:"
   echo "\tnwatch taskname [-c:nwatch.json | --config:nwatch.json]"
   echo "\tnwatch -t:taskname [-c:nwatch.json | --config:nwatch.json]"
   echo "\tnwatch -task:taskname [-c:nwatch.json | --config:nwatch.json]"
   echo ""
-  echo "Direct call command without watch, pass --dontWatch:"
-  echo "\tnwatch task.<taskname_to_call>.command.<identifier> --dontWatch"
-  echo "\tnwatch task.build.command.default --dontWatch"
+  echo "Direct call command without watch, pass --runTask:"
+  echo "\tnwatch <taskname>.<identifier> --runTask"
+  echo "\tnwatch build.default --runTask"
+  echo ""
+  echo "Use > for tasks chaining:"
+  echo "\tnwatch \"build.default>run.default\" --runTask"
+  echo "\tabove command will execute task.build.command.default then task.run.command.default"
+  echo ""
+  echo "Pass data, for early replacement on config:"
+  echo "\t" & """nwatch taskname --data:"{\"srcDir\": \"src\"}""""
+  echo "\tabove command will replace <srcDir> with src before config being parsed"
   echo ""
 
 
@@ -177,22 +205,22 @@ proc runTask(
 proc watchTask*(
     self: NWatch,
     task: string,
-    watch: bool = true
+    isRunTask: bool = false
   ) {.gcsafe async.} = ## \
   ## parse argument and watch task by argument
   ## find task from nwatch.json
   ## if just want to execute task without watch
-  ## set watch to false
+  ## set runTask to true
 
   var taskToWatch = self.nWatchConfig{"task"}{task}
-  if not watch:
+  if isRunTask:
     taskToWatch = self.nWatchConfig.findValue(task){hostOS}
 
   if taskToWatch.isNil:
     echo &"error: {task} task not found!."
     return
 
-  if not watch:
+  if isRunTask:
     await taskToWatch.runTask
     return
 
@@ -229,7 +257,8 @@ when isMainModule:
   var
     nWatchConfig: string = $(getCurrentDir()/"nwatch.json".Path)
     nWatchTask: string
-    watch: bool = true
+    isRunTask: bool
+    data: JsonNode
   ## parse command line
   for kind, key, val in getOpt():
     case kind
@@ -241,14 +270,18 @@ when isMainModule:
         nWatchTask = val
       of "c":
         nWatchConfig = val
+      of "d":
+        data = val.parseJson
     of cmdLongOption:
       case key
       of "task":
         nWatchTask = val
       of "config":
         nWatchConfig = val
-      of "dontWatch":
-        watch = false
+      of "data":
+        data = val.parseJson
+      of "runTask":
+        isRunTask = true
     of cmdEnd: discard
 
   if not nWatchConfig.Path.fileExists or nWatchTask == "":
@@ -256,5 +289,14 @@ when isMainModule:
     if not nWatchConfig.Path.fileExists:
       echo "error: nwatch.json not found!."
     help()
+  elif isRunTask:
+    discard
+    for task in nWatchTask.split(">"):
+      let cmd = task.split(".")
+      let taskToExec = &"task.{(cmd[0]).strip}.command.{(cmd[1]).strip}"
+      waitFor newNwatch(nWatchConfig.Path, data).
+        watchTask(taskToExec, isRunTask)
   else:
-    waitFor newNwatch(nWatchConfig.Path).watchTask(nWatchTask, watch)
+    waitFor newNwatch(nWatchConfig.Path, data).
+      watchTask(nWatchTask, isRunTask)
+
