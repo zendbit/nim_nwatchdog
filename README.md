@@ -324,8 +324,21 @@ nwatch will automatically pick the command depend on the host os, in this case m
 - we can use :: for directory separator, the nwatch will automatically replace that part into host os directory separator
 
 ### Direct call task without watch
-In some cases we want to call the command without watch file changes, we can pass **--dontWatch** to nwatch command
-- nwatch task.<taskname_to_call>.command.<identifier> --dontWatch
+In some cases we want to call the command without watch file changes, we can pass **--runTask** to nwatch command
+- nwatch <taskname_to_call>.<identifier> --runTask
 ```bash
-nwatch task.build.command.default --dontWatch
+nwatch build.default --runTask
 ```
+above command will run task.build.command.default
+
+- call multiple task with > for task chaining
+```bash
+nwatch "build.default>run.default" --runTask
+```
+above command will run task.build.command.default then task.run.command.default
+
+- pass data for early replacement before nwatch json config being parsed
+```bash
+nwatch "build.default>run.default" --data:"{\"srcDir\": \"src\"}" --runTask
+```
+above command will pass data and will replace "<srcDir>" with "src"
