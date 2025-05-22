@@ -6,8 +6,8 @@
         "mainExec": "app",
         "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
     },
-    "interval": 100,
-    "instanceId": "example-app-001",
+    "interval": 1000,
+    "instanceId": "app-example-1",
     "task": {
         "buildAndRun": {
             "path": "<define.srcDir>",
@@ -23,20 +23,14 @@
             "path": "<define.srcDir>",
             "pattern": "<define.nimFilePattern>",
             "command": {
-                "default": {
-                    "linux": [
-                        {"cmd": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
-                    ],
-                    "macosx": [],
-                    "windows": [],
-                    "netbsd": [],
-                    "freebsd": [],
-                    "openbsd": [],
-                    "solaris": [],
-                    "aix": [],
-                    "haiku": [],
-                    "standalone": []
-                }
+                "default": [
+                    {
+                        "hostOS": ["all"],
+                        "list": [
+                            {"exec": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
+                        ]
+                    }
+                ]
             },
             "onCreated": [],
             "onModified": ["<task.build.command.default>"],
@@ -46,21 +40,14 @@
             "path": "<define.srcDir>",
             "pattern": "<define.nimFilePattern>",
             "command": {
-                "default": {
-                    "linux": [
-                        {"cmd": "<define.binDir>::<define.mainExec>", "ignoreFail": false}
-                    ],
-                    "macosx": [],
-                    "windows": [],
-                    "netbsd": [],
-                    "freebsd": [],
-                    "openbsd": [],
-                    "solaris": [],
-                    "aix": [],
-                    "haiku": [],
-                    "posix": [],
-                    "standalone": []
-                }
+                "default": [
+                    {
+                        "hostOS": ["all"],
+                        "list": [
+                            {"exec": "<define.binDir>::<define.mainExec>"}
+                        ]
+                    }
+                ]
             },
             "onCreated": [],
             "onModified": ["<task.run.command.default>"],
