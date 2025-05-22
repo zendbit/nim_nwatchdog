@@ -90,8 +90,8 @@ above command will call taskname configuration from current nwatch.json. Example
         "mainExec": "app",
         "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
     },
-    "interval": 100,
-    "instanceId": "example-app-001",
+    "interval": 1000,
+    "instanceId": "app-example-1",
     "task": {
         "buildAndRun": {
             "path": "<define.srcDir>",
@@ -107,20 +107,14 @@ above command will call taskname configuration from current nwatch.json. Example
             "path": "<define.srcDir>",
             "pattern": "<define.nimFilePattern>",
             "command": {
-                "default": {
-                    "linux": [
-                        {"cmd": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
-                    ],
-                    "macosx": [],
-                    "windows": [],
-                    "netbsd": [],
-                    "freebsd": [],
-                    "openbsd": [],
-                    "solaris": [],
-                    "aix": [],
-                    "haiku": [],
-                    "standalone": []
-                }
+                "default": [
+                    {
+                        "hostOS": ["all"],
+                        "list": [
+                            {"exec": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
+                        ]
+                    }
+                ]
             },
             "onCreated": [],
             "onModified": ["<task.build.command.default>"],
@@ -130,21 +124,14 @@ above command will call taskname configuration from current nwatch.json. Example
             "path": "<define.srcDir>",
             "pattern": "<define.nimFilePattern>",
             "command": {
-                "default": {
-                    "linux": [
-                        {"cmd": "<define.binDir>::<define.mainExec>", "ignoreFail": false}
-                    ],
-                    "macosx": [],
-                    "windows": [],
-                    "netbsd": [],
-                    "freebsd": [],
-                    "openbsd": [],
-                    "solaris": [],
-                    "aix": [],
-                    "haiku": [],
-                    "posix": [],
-                    "standalone": []
-                }
+                "default": [
+                    {
+                        "hostOS": ["all"],
+                        "list": [
+                            {"exec": "<define.binDir>::<define.mainExec>"}
+                        ]
+                    }
+                ]
             },
             "onCreated": [],
             "onModified": ["<task.run.command.default>"],
@@ -204,7 +191,7 @@ now we have nwatch.json look like this
         "mainExec": "testapp",
         "nimFilePattern": "[\\w\\W]*\\.[(nim)]+$"
     },
-    "interval": 100,
+    "interval": 1000,
     "instanceId": "testapp",
     "task": {
         "buildAndRun": {
@@ -221,20 +208,14 @@ now we have nwatch.json look like this
             "path": "<define.srcDir>",
             "pattern": "<define.nimFilePattern>",
             "command": {
-                "default": {
-                    "linux": [
-                        {"cmd": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
-                    ],
-                    "macosx": [],
-                    "windows": [],
-                    "netbsd": [],
-                    "freebsd": [],
-                    "openbsd": [],
-                    "solaris": [],
-                    "aix": [],
-                    "haiku": [],
-                    "standalone": []
-                }
+                "default": [
+                    {
+                        "hostOS": ["all"],
+                        "list": [
+                            {"exec": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
+                        ]
+                    }
+                ]
             },
             "onCreated": [],
             "onModified": ["<task.build.command.default>"],
@@ -244,21 +225,14 @@ now we have nwatch.json look like this
             "path": "<define.srcDir>",
             "pattern": "<define.nimFilePattern>",
             "command": {
-                "default": {
-                    "linux": [
-                        {"cmd": "<define.binDir>::<define.mainExec>", "ignoreFail": false}
-                    ],
-                    "macosx": [],
-                    "windows": [],
-                    "netbsd": [],
-                    "freebsd": [],
-                    "openbsd": [],
-                    "solaris": [],
-                    "aix": [],
-                    "haiku": [],
-                    "posix": [],
-                    "standalone": []
-                }
+                "default": [
+                    {
+                        "hostOS": ["all"],
+                        "list": [
+                            {"exec": "<define.binDir>::<define.mainExec>"}
+                        ]
+                    }
+                ]
             },
             "onCreated": [],
             "onModified": ["<task.run.command.default>"],
@@ -288,36 +262,63 @@ nwatch buildAndRun
 each task can have different pattern for listening for example we want to listen each time file .js modified and want to run some command task
 
 ```json
-"task": {
-  "build": {
-      "path": "<define.srcDir>",
-      "pattern": "[\\w\\W]*\\.[(js)]+$",
-      "command": {
-          "default": {
-              "linux": [
-                  "some cmd",
-                  "others cmd",
-                  "and the others"
-              ],
-              "macosx": [],
-              "windows": [],
-              "netbsd": [],
-              "freebsd": [],
-              "openbsd": [],
-              "solaris": [],
-              "aix": [],
-              "haiku": [],
-              "standalone": []
-          }
-      },
-      "onCreated": [],
-      "onModified": ["<task.build.command.default>"],
-      "onDeleted": []
-  }
+"build": {
+    "path": "<define.srcDir>",
+    "pattern": "<define.nimFilePattern>",
+    "command": {
+        "default": [
+            {
+                "hostOS": ["all"],
+                "list": [
+                    {"exec": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
+                ]
+            }
+        ]
+    },
+    "onCreated": [],
+    "onModified": ["<task.build.command.default>"],
+    "onDeleted": []
 }
 ```
 
 nwatch will automatically pick the command depend on the host os, in this case my host os is linux so the command will automatic call all command inside linux section
+
+let see this section, hostOS if ["all"] will executed cross platform, and we can filter it depend on the current hostOS
+```
+"hostOS": ["all"]
+```
+
+this will only executed if hostOS in linux, macosx and freebsd
+```
+"hostOS": ["linux", "macosx", "freebsd"]
+```
+
+and the task will executed seaquencetially depend on the order of the list of command identifier
+```
+"command": {
+    "default": [
+        {
+            "hostOS": ["all"],
+            "list": [
+                {"exec": "nim --outDir:<define.binDir> c <define.srcDir>::<define.main>", "ignoreFail": false}
+            ]
+        },
+        {
+            "hostOS": ["linux", "macosx", "freebsd"],
+            "list": [
+                {"exec": "rm -f <define.srcDir>::<define.mainExec>", "ignoreFail": true}
+            ]
+        },
+        {
+            "hostOS": ["windows"],
+            "list": [
+                {"exec": "del <define.srcDir>::<define.mainExec>", "ignoreFail": true}
+            ]
+        }
+    ]
+}
+```
+above command will execute ["all"] -> ["linux", "macosx", "freebsd"] or ["windows"] depend on the hostOS
 
 ***note***
 - we can use tag "<x.y.z>" to refer to others attribute or object
