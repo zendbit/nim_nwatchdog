@@ -190,16 +190,27 @@ proc runTask(
     else:
       taskList.add(task)
 
-  for cmd in taskList:
-    var cmdStr = cmd{"cmd"}.getStr
-    for (key, val) in replace:
-      cmdStr = cmdStr.replace(key, val)
+  for task in taskList:
+    let host = task{"hostOS"}
+    let listCmd = task{"list"}
+    if host.isNil or
+      listCmd.isNil or
+      (
+        hostOS notin host.to(seq[string]) and
+        "all" notin host.to(seq[string])
+      ):
+      continue
 
-    if cmdStr.execCmd != 0 and
-      not cmd{"ignoreFail"}.isNil and
-      not cmd{"ignoreFail"}.getBool:
-      echo &"error: fail to execute\n\t{cmdStr}"
-      break
+    for cmd in listCmd:
+      var cmdStr = cmd{"exec"}.getStr
+      for (key, val) in replace:
+        cmdStr = cmdStr.replace(key, val)
+
+      if cmdStr.execCmd != 0 and
+        not cmd{"ignoreFail"}.isNil and
+        not cmd{"ignoreFail"}.getBool:
+        echo &"error: fail to execute\n\t{cmdStr}"
+        break
 
 
 proc watchTask*(
@@ -214,7 +225,7 @@ proc watchTask*(
 
   var taskToWatch = self.nWatchConfig{"task"}{task}
   if isRunTask:
-    taskToWatch = self.nWatchConfig.findValue(task){hostOS}
+    taskToWatch = self.nWatchConfig.findValue(task)
 
   if taskToWatch.isNil:
     echo &"error: {task} task not found!."
