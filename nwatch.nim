@@ -201,6 +201,7 @@ proc runTask(
       ):
       continue
 
+    var isShouldExit = false
     for cmd in listCmd:
       var cmdStr = cmd{"exec"}.getStr
       for (key, val) in replace:
@@ -210,7 +211,10 @@ proc runTask(
         not cmd{"ignoreFail"}.isNil and
         not cmd{"ignoreFail"}.getBool:
         echo &"error: fail to execute\n\t{cmdStr}"
+        isShouldExit = not isShouldExit
         break
+
+    if isShouldExit: break
 
 
 proc watchTask*(
