@@ -324,6 +324,19 @@ above command will execute ["all"] -> ["linux", "macosx", "freebsd"] or ["window
 - we can use tag "<x.y.z>" to refer to others attribute or object
 - we can use :: for directory separator, the nwatch will automatically replace that part into host os directory separator
 
+#### Show available task
+```bash
+nwatch --taskList
+```
+
+#### show task information
+```bash
+nwatch build --taskInfo
+```
+```bash
+nwatch build.default --taskInfo
+```
+
 ### Direct call task without watch
 In some cases we want to call the command without watch file changes, we can pass **--runTask** to nwatch command
 - nwatch <taskname_to_call>.<identifier> --runTask
