@@ -321,6 +321,7 @@ when isMainModule:
     data: JsonNode
     isShowTaskList: bool
     isShowTaskInfo: bool
+    isShowHelp: bool
   ## parse command line
   for kind, key, val in getOpt():
     case kind
@@ -334,6 +335,8 @@ when isMainModule:
         nWatchConfig = val
       of "d":
         data = val.parseJson
+      of "h":
+        isShowHelp = true
     of cmdLongOption:
       case key
       of "task":
@@ -348,10 +351,11 @@ when isMainModule:
         isShowTaskList = true
       of "taskInfo":
         isShowTaskInfo = true
+      of "help":
+        isShowHelp = true
     of cmdEnd: discard
 
-  if not nWatchConfig.Path.fileExists:
-    echo "error: missing parameter!."
+  if not nWatchConfig.Path.fileExists or isShowHelp:
     if not nWatchConfig.Path.fileExists:
       echo "error: nwatch.json not found!."
     help()
