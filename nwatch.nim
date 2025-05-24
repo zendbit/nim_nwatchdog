@@ -12,7 +12,8 @@ import
     files,
     strformat,
     appdirs,
-    dirs
+    dirs,
+    sugar
   ]
 from std/os import getAppDir
 from std/osproc import execCmd
@@ -207,6 +208,9 @@ proc runTask(
       for (key, val) in replace:
         cmdStr = cmdStr.replace(key, val)
 
+      echo "## Running Task"
+      echo &"=> {cmdStr}"
+      echo ""
       if cmdStr.execCmd != 0 and
         not cmd{"ignoreFail"}.isNil and
         not cmd{"ignoreFail"}.getBool:
@@ -215,6 +219,44 @@ proc runTask(
         break
 
     if isShouldExit: break
+
+
+proc showAvailableTasks*(self: NWatch) {.gcsafe.} = ## \
+  ## show available task
+
+  let tasks = self.nWatchConfig{"task"}
+  if tasks.isNil:
+    echo "No task found!."
+    return
+
+  echo "## Available Tasks:"
+  echo ""
+  for k, v in tasks:
+    let command: seq[string] =
+      if v{"command"}.isNil: @[]
+      else:
+        collect(newSeq):
+          for c, _ in v{"command"}: c
+    echo &"=> {k} [{command.join(\", \")}]"
+
+
+proc showTaskInfo*(
+    self: NWatch,
+    task: string
+  ) {.gcsafe.} = ## \
+  ## show available task
+
+  var taskParts = task.split(".")
+  if taskParts.len == 2: taskParts.insert("command", 1)
+
+  let tasks = self.nWatchConfig{"task"}.findValue(taskParts.join("."))
+  if tasks.isNil:
+    echo "No task found!."
+    return
+
+  echo &"## Task {task}:"
+  echo ""
+  echo tasks.pretty
 
 
 proc watchTask*(
@@ -239,6 +281,9 @@ proc watchTask*(
     await taskToWatch.runTask
     return
 
+  echo "## Start watch event"
+  echo &"=> {task}"
+  echo ""
   self.nWatchDog.add(
     taskToWatch["path"].getStr,
     taskToWatch["pattern"].getStr,
@@ -274,6 +319,8 @@ when isMainModule:
     nWatchTask: string
     isRunTask: bool
     data: JsonNode
+    isShowTaskList: bool
+    isShowTaskInfo: bool
   ## parse command line
   for kind, key, val in getOpt():
     case kind
@@ -297,21 +344,30 @@ when isMainModule:
         data = val.parseJson
       of "runTask":
         isRunTask = true
+      of "taskList":
+        isShowTaskList = true
+      of "taskInfo":
+        isShowTaskInfo = true
     of cmdEnd: discard
 
-  if not nWatchConfig.Path.fileExists or nWatchTask == "":
+  if not nWatchConfig.Path.fileExists:
     echo "error: missing parameter!."
     if not nWatchConfig.Path.fileExists:
       echo "error: nwatch.json not found!."
     help()
+    quit(QuitFailure)
+
+  let nWatch = newNwatch(nWatchConfig.Path, data)
+  if isShowTaskList:
+    nWatch.showAvailableTasks
+  elif isShowTaskInfo:
+    nWatch.showTaskInfo(nWatchTask)
   elif isRunTask:
     discard
     for task in nWatchTask.split(">"):
       let cmd = task.split(".")
       let taskToExec = &"task.{(cmd[0]).strip}.command.{(cmd[1]).strip}"
-      waitFor newNwatch(nWatchConfig.Path, data).
-        watchTask(taskToExec, isRunTask)
+      waitFor nWatch.watchTask(taskToExec, isRunTask)
   else:
-    waitFor newNwatch(nWatchConfig.Path, data).
-      watchTask(nWatchTask, isRunTask)
+    waitFor nWatch.watchTask(nWatchTask, isRunTask)
 
