@@ -120,6 +120,8 @@ proc newNWatch*(
 
       nWatchJson = nWatchConfigStr.parseJson
 
+    nWatchJson = nWatchJson.parseConfig
+
     let define = nWatchJson{"define"}
     let interval = nWatchJson{"interval"}
     let instanceId = nWatchJson{"instanceId"}
@@ -140,13 +142,14 @@ proc newNWatch*(
     ## create working dir
     let workDir = getCacheDir()/"nwatchdog".Path
     workDir.createDir
+
     result = NWatch[JsonNode](
         nWatchDog: NWatchDog[JsonNode](
           interval: interval.getInt,
           instanceid: instanceId.getStr,
           workdir: $workDir
         ),
-        nWatchConfig: nWatchJson.parseConfig
+        nWatchConfig: nWatchJson
       )
 
   except Exception as e:
